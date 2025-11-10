@@ -1,4 +1,3 @@
-# queuectl/cli.py
 import click
 import json
 import uuid
@@ -24,9 +23,6 @@ def start_worker_process():
     try:
         os.makedirs(database.APP_DIR, exist_ok=True)
         log_f = open(database.LOG_FILE, 'a')
-        
-        # Redirect stdout and stderr to the log file
-        # This is CRITICAL for detaching from the parent terminal
         sys.stdout = log_f
         sys.stderr = log_f
         
@@ -170,14 +166,10 @@ def start(count):
         click.echo(f"Workers are already running with PIDs: {active_pids}")
         click.echo("Please stop them first with 'queuectl worker stop'.")
         return
-
-    # Use a detached subprocess to avoid multiprocessing's atexit join hang
-    # We launch a small module that calls start_worker_process in a fresh interpreter
     processes = []
     cmd = [sys.executable, '-m', 'queuectl.worker_launcher']
     for _ in range(count):
         try:
-            # start_new_session detaches from controlling TTY and parent process group
             p = subprocess.Popen(cmd, close_fds=True, start_new_session=True)
             processes.append(p)
         except Exception as e:

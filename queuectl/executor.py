@@ -1,4 +1,3 @@
-# queuectl/executor.py
 import subprocess
 
 def execute_job_command(command: str):
@@ -8,14 +7,12 @@ def execute_job_command(command: str):
     Returns 0 for success, non-zero for failure.
     """
     try:
-        # We use shell=True to interpret the command as a shell string
-        # (e.g., "echo 'Hello World'")
         result = subprocess.run(
             command, 
             shell=True, 
             capture_output=True, 
             text=True, 
-            timeout=3600 # 1 hour timeout, can be configured later
+            timeout=3600
         )
         
         if result.returncode != 0:
@@ -27,7 +24,7 @@ def execute_job_command(command: str):
         
     except subprocess.TimeoutExpired:
         print(f"Command '{command}' timed out.")
-        return -1 # Use a custom code for timeout
+        return -1
     except Exception as e:
         print(f"Error executing command '{command}': {e}")
-        return -1 # Indicate failure
+        return -1

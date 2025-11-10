@@ -1,4 +1,3 @@
-# queuectl/config.py
 from . import database
 
 DEFAULT_CONFIG = {
@@ -25,21 +24,16 @@ def get_config_value(key: str):
     cursor = conn.cursor()
     norm_key = _normalize_key(key)
     alt_key = None
-    # If the normalized key has underscores, try a hyphenated alternative for backward-compat
     if norm_key and '_' in norm_key:
         alt_key = norm_key.replace('_', '-')
     
     try:
-        # 1) Try the normalized key first
         cursor.execute("SELECT value FROM config WHERE key = ?", (norm_key,))
         row = cursor.fetchone()
-        
-        # 2) If not found, try an alternative legacy key (hyphenated), then migrate it
         if not row and alt_key:
             cursor.execute("SELECT value FROM config WHERE key = ?", (alt_key,))
             legacy_row = cursor.fetchone()
             if legacy_row:
-                # Migrate legacy key to normalized key
                 try:
                     cursor.execute(
                         "INSERT OR REPLACE INTO config (key, value) VALUES (?, ?)",
@@ -48,17 +42,14 @@ def get_config_value(key: str):
                     cursor.execute("DELETE FROM config WHERE key = ?", (alt_key,))
                     conn.commit()
                 except Exception:
-                    # If migration fails, don't block returning the value
                     conn.rollback()
                 row = legacy_row
         
         if row:
-            # Config values are stored as text, cast them
             if norm_key in ['max_retries', 'backoff_base']:
                 return int(row['value'])
             return row['value']
         else:
-            # Return default if not in DB
             return DEFAULT_CONFIG.get(norm_key)
             
     except Exception as e:
@@ -92,7 +83,6 @@ def list_config() -> dict:
     Returns a dictionary of effective configuration values, merging DB values
     (normalized) with defaults. Numeric config values are returned as ints.
     """
-    # Collect keys from DB (normalized) and defaults
     conn = database.get_db_connection()
     cursor = conn.cursor()
     keys = set(DEFAULT_CONFIG.keys())
@@ -102,7 +92,6 @@ def list_config() -> dict:
         for row in rows:
             keys.add(_normalize_key(row['key']))
     except Exception:
-        # If reading fails, fall back to defaults only
         pass
     finally:
         conn.close()

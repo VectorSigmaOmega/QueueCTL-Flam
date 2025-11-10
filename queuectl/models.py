@@ -1,10 +1,9 @@
-# queuectl/models.py
 import json
 import sqlite3
-import math # Import math for power calculation
-from datetime import datetime, timezone # Import timezone
+import math
+from datetime import datetime, timezone
 from . import database
-from . import config # Import the new config module
+from . import config
 
 def create_job(job_data: dict):
     """
@@ -16,7 +15,6 @@ def create_job(job_data: dict):
     conn = database.get_db_connection()
     cursor = conn.cursor()
     
-    # Use timezone-aware datetime
     now = datetime.now(timezone.utc).isoformat()
     
     max_retries = job_data.get('max_retries')
@@ -71,7 +69,6 @@ def list_jobs(state: str = None):
     
     return [dict(job) for job in jobs]
 
-# --- UPDATED FUNCTION ---
 def atomically_get_next_job(worker_id: str):
     """
     Atomically fetches the next 'pending' job OR a 'failed' job
@@ -82,25 +79,9 @@ def atomically_get_next_job(worker_id: str):
     cursor = conn.cursor()
     
     try:
-        # Load config values needed for the query
         backoff_base = config.get_config_value('backoff_base')
-        
-        # Get current time in UTC as a Unix timestamp
         now_timestamp = datetime.now(timezone.utc).timestamp()
-        
-        # This query is complex:
-    # 1. Select any 'pending' job.
-    # 2. Select any 'failed' job WHERE retry is due using exponential backoff:
-    #    delay = (backoff_base ^ attempts) seconds
-    #    current_time > updated_at_time + POW(backoff_base, attempts)
-        # 3. Order by creation time to process oldest jobs first.
-        
-        # Note: SQLite doesn't have a POWER() function by default.
-        # We must register our own.
         conn.create_function("POW", 2, math.pow)
-        
-        # We use strftime('%s', updated_at) to convert ISO timestamp to Unix time
-        # We must also cast it to an INTEGER
         query = f"""
             SELECT id FROM jobs
             WHERE state = 'pending'
@@ -148,7 +129,6 @@ def atomically_get_next_job(worker_id: str):
     finally:
         conn.close()
 
-# --- UPDATED FUNCTION ---
 def update_job_state(job_id: str, state: str, increment_attempts: bool = False):
     """
     Updates the state and 'updated_at' timestamp of a job.
@@ -184,7 +164,6 @@ def update_job_state(job_id: str, state: str, increment_attempts: bool = False):
     finally:
         conn.close()
 
-# --- NEW FUNCTION ---
 def retry_dead_job(job_id: str):
     """
     Moves a job from the 'dead' state back to 'pending' and resets its attempts.
@@ -194,7 +173,6 @@ def retry_dead_job(job_id: str):
     now = datetime.now(timezone.utc).isoformat()
 
     try:
-        # Check if the job is actually in the 'dead' state
         cursor.execute("SELECT state FROM jobs WHERE id = ?", (job_id,))
         job = cursor.fetchone()
         
@@ -204,7 +182,6 @@ def retry_dead_job(job_id: str):
         if job['state'] != 'dead':
             raise ValueError(f"Job '{job_id}' is in state '{job['state']}', not 'dead'.")
 
-        # Reset the job
         cursor.execute(
             """
             UPDATE jobs
@@ -220,7 +197,7 @@ def retry_dead_job(job_id: str):
         
     except Exception as e:
         conn.rollback()
-        raise e # Re-raise the exception to be caught by the CLI
+        raise e
     finally:
         conn.close()
 
