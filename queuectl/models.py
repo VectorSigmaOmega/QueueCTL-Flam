@@ -222,3 +222,34 @@ def retry_dead_job(job_id: str):
         raise e # Re-raise the exception to be caught by the CLI
     finally:
         conn.close()
+
+        
+def get_job_summary():
+    """
+    Returns a dictionary with the count of jobs in each state.
+    """
+    conn = database.get_db_connection()
+    cursor = conn.cursor()
+    
+    summary = {
+        'pending': 0,
+        'processing': 0,
+        'completed': 0,
+        'failed': 0,
+        'dead': 0,
+        'total': 0,
+    }
+    
+    try:
+        cursor.execute("SELECT state, COUNT(*) FROM jobs GROUP BY state")
+        rows = cursor.fetchall()
+        for row in rows:
+            if row['state'] in summary:
+                summary[row['state']] = row['COUNT(*)']
+            summary['total'] += row['COUNT(*)']
+        return summary
+    except Exception as e:
+        print(f"Error getting job summary: {e}")
+        return summary
+    finally:
+        conn.close()

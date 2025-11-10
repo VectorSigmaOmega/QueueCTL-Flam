@@ -3,15 +3,19 @@ import sqlite3
 import os
 
 # We will store the database in a hidden directory in the user's home folder
-DB_DIR = os.path.join(os.path.expanduser('~'), '.queuectl')
-DB_PATH = os.path.join(DB_DIR, 'queue.db')
+APP_DIR = os.path.join(os.path.expanduser('~'), '.queuectl')
+DB_PATH = os.path.join(APP_DIR, 'queue.db')
+PID_FILE = os.path.join(APP_DIR, 'queuectl.pid')
+# --- NEW ---
+LOG_FILE = os.path.join(APP_DIR, 'worker.log') # Add a log file path
+
 
 def get_db_connection():
     """
     Creates the app directory if it doesn't exist and returns
     a connection to the SQLite database.
     """
-    os.makedirs(DB_DIR, exist_ok=True)
+    os.makedirs(APP_DIR, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     # This allows us to access columns by name (e.g., row['id'])
     conn.row_factory = sqlite3.Row
@@ -21,6 +25,10 @@ def init_db():
     """
     Initializes the database schema and inserts default configuration.
     """
+    # --- MODIFIED ---
+    # Ensure app dir exists before we do anything
+    os.makedirs(APP_DIR, exist_ok=True)
+    
     conn = get_db_connection()
     cursor = conn.cursor()
 
@@ -57,4 +65,4 @@ def init_db():
 
     conn.commit()
     conn.close()
-    print(f"Database initialized successfully at: {DB_PATH}")
+    print(f"Database and config initialized at: {APP_DIR}")

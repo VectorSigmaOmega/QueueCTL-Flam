@@ -3,7 +3,6 @@ import time
 import signal
 from . import models
 from . import executor
-# No config import needed here, models handles it
 
 class Worker:
     """
@@ -11,16 +10,32 @@ class Worker:
     """
     def __init__(self, worker_id):
         self.worker_id = worker_id
-        self.running = True
+        # --- MODIFIED ---
+        # This flag will be set to False by the signal handler
+        self.running = True 
         self.setup_signal_handlers()
         print(f"Worker {self.worker_id} starting...")
 
+    # --- MODIFIED ---
     def setup_signal_handlers(self):
         """Sets up signal handlers for graceful shutdown."""
-        pass
+        # When SIGTERM is received, call self.handle_shutdown
+        signal.signal(signal.SIGTERM, self.handle_shutdown)
+        # Also handle KeyboardInterrupt (Ctrl+C) gracefully
+        signal.signal(signal.SIGINT, self.handle_shutdown)
+
+    # --- NEW FUNCTION ---
+    def handle_shutdown(self, signum, frame):
+        """
+        Signal handler to initiate a graceful shutdown.
+        """
+        print(f"Worker {self.worker_id} received shutdown signal {signum}. Finishing current job...")
+        self.running = False # This will stop the 'run' loop
 
     def run(self):
         """The main worker loop."""
+        # --- MODIFIED ---
+        # The loop now checks the self.running flag
         while self.running:
             job = None
             try:
@@ -52,19 +67,24 @@ class Worker:
                             print(f"Worker {self.worker_id} failed job {job['id']}, will retry (attempts: {current_attempts}/{max_retries})")
 
                 else:
-                    time.sleep(1)
+                    # No job found, wait a moment before polling again
+                    # Only sleep if we're not shutting down
+                    if self.running:
+                        time.sleep(1)
 
             except Exception as e:
-                print(f"Worker {self.worker_id} encountered an error: {e}")
-                if job:
-                    try:
-                        # On unexpected error, treat as a failure/retry
-                        if (job['attempts'] + 1) >= job['max_retries']:
-                            models.update_job_state(job['id'], 'dead', increment_attempts=True)
-                        else:
-                            models.update_job_state(job['id'], 'failed', increment_attempts=True)
-                    except Exception as db_e:
-                        print(f"Worker {self.worker_id} failed to update job state: {db_e}")
-                time.sleep(1)
+                # Don't log errors if we are shutting down
+                if self.running:
+                    print(f"Worker {self.worker_id} encountered an error: {e}")
+                    if job:
+                        try:
+                            # On unexpected error, treat as a failure/retry
+                            if (job['attempts'] + 1) >= job['max_retries']:
+                                models.update_job_state(job['id'], 'dead', increment_attempts=True)
+                            else:
+                                models.update_job_state(job['id'], 'failed', increment_attempts=True)
+                        except Exception as db_e:
+                            print(f"Worker {self.worker_id} failed to update job state: {db_e}")
+                    time.sleep(1) # Wait after an error
 
         print(f"Worker {self.worker_id} shutting down.")
