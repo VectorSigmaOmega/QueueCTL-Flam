@@ -185,6 +185,7 @@ Purpose: Run a quick end-to-end demonstration script to verify the main flows of
 How to run:
 
 ```bash
+chmod +x demo_script.sh
 bash ./demo_script.sh
 ```
 
