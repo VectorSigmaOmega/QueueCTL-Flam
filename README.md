@@ -14,13 +14,13 @@ It manages background jobs with multiple worker processes, handles retries using
      cd QueueCTL-Flam
      ```
 2. Install dependencies
-     ```bash
-     pip install -r requirements.txt
-     ```
-3. Install the CLI (editable)
-     ```bash
-     pip install -e .
-     ```
+    ```bash
+    python -m pip install -r requirements.txt
+    ```
+3. Install the CLI
+    ```bash
+    python -m pip install .
+    ```
 4. Initialize the database (creates `~/.queuectl/queue.db`)
      ```bash
      queuectl init-db
@@ -84,7 +84,41 @@ It manages background jobs with multiple worker processes, handles retries using
 
 ---
 
-## 3) Architecture Overview
+## 3) Project structure and file roles
+
+Project tree:
+
+```text
+QueueCTL-Flam/
+├─ README.md
+├─ demo_script.sh           
+├─ requirements.txt           
+├─ setup.py                
+└─ queuectl/
+    ├─ __init__.py            
+    ├─ cli.py                 
+    ├─ config.py               
+    ├─ database.py        
+    ├─ executor.py             
+    ├─ models.py              
+    ├─ worker.py               
+    └─ worker_launcher.py    
+```
+
+Purpose of files:
+- `setup.py`: Allows `python -m pip install .` and exposes the `queuectl` command.
+- `demo_script.sh`: End-to-end script demonstrating success, retries/backoff, DLQ, persistence, multi-worker.
+- `queuectl/cli.py`: CLI entry point and command definitions.
+- `queuectl/models.py`: Core job lifecycle operations and backoff logic.
+- `queuectl/worker.py`: Background worker behavior and signal handling.
+- `queuectl/database.py`: Storage configuration and schema setup.
+- `queuectl/config.py`: Configuration storage and normalization.
+- `queuectl/executor.py`: Command execution helper.
+- `queuectl/worker_launcher.py`: Helper to spawn workers detached from the CLI.
+
+---
+
+## 4) Architecture Overview
 
 - Storage: SQLite database at `~/.queuectl/queue.db` with two tables:
     - `jobs(id, command, state, attempts, max_retries, created_at, updated_at)`
@@ -99,7 +133,7 @@ It manages background jobs with multiple worker processes, handles retries using
 
 ---
 
-## 4) Job Lifecycle
+## 5) Job Lifecycle
 
 1. Enqueued: `pending`
 2. Picked by a worker: `processing`
@@ -111,7 +145,7 @@ It manages background jobs with multiple worker processes, handles retries using
 
 ---
 
-## 5) Manual Testing Instructions
+## 6) Manual Testing Instructions
 
 Until automated tests are reintroduced, you can validate core flows manually:
 
@@ -140,6 +174,18 @@ queuectl list --state pending
 
 # Stop workers
 queuectl worker stop
+```
+
+---
+
+## 7) Demo script
+
+Purpose: Run a quick end-to-end demonstration script to verify the main flows of assignment.
+
+How to run:
+
+```bash
+bash ./demo_script.sh
 ```
 
 ---
