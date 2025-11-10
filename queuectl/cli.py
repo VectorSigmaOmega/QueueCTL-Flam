@@ -288,11 +288,49 @@ def config():
 @click.argument('value')
 def config_set(key, value):
     """
-    Set a configuration value (e.g., max_retries, backoff_base).
+    Set a configuration value.
+
+    Examples:
+      queuectl config set max_retries 4
+      queuectl config set backoff_base 4
+      queuectl config set max-retries 4   # hyphenated keys accepted
+      queuectl config set backoff-base 4  # hyphenated keys accepted
     """
     try:
         config_module.set_config_value(key, value)
         click.echo(f"Config '{key}' set to '{value}'.")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}", err=True)
+
+@config.command('get')
+@click.argument('key')
+def config_get(key):
+    """
+    Get a configuration value by key (hyphen or underscore forms accepted).
+    """
+    try:
+        val = config_module.get_config_value(key)
+        if val is None:
+            click.echo(f"Config '{key}': <not set> (no default)")
+        else:
+            click.echo(f"{key} = {val}")
+    except Exception as e:
+        click.echo(f"An unexpected error occurred: {e}", err=True)
+
+@config.command('list')
+def config_list():
+    """
+    List effective configuration values (DB overrides + defaults).
+    """
+    try:
+        cfg = config_module.list_config()
+        if not cfg:
+            click.echo("No configuration values found.")
+            return
+        click.echo(f"{'KEY':<20} VALUE")
+        click.echo("-" * 40)
+        for k in sorted(cfg.keys()):
+            click.echo(f"{k:<20} {cfg[k]}")
     except Exception as e:
         click.echo(f"An unexpected error occurred: {e}", err=True)
 

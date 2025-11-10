@@ -86,3 +86,28 @@ def set_config_value(key: str, value: str):
         conn.rollback()
     finally:
         conn.close()
+
+def list_config() -> dict:
+    """
+    Returns a dictionary of effective configuration values, merging DB values
+    (normalized) with defaults. Numeric config values are returned as ints.
+    """
+    # Collect keys from DB (normalized) and defaults
+    conn = database.get_db_connection()
+    cursor = conn.cursor()
+    keys = set(DEFAULT_CONFIG.keys())
+    try:
+        cursor.execute("SELECT key FROM config")
+        rows = cursor.fetchall()
+        for row in rows:
+            keys.add(_normalize_key(row['key']))
+    except Exception:
+        # If reading fails, fall back to defaults only
+        pass
+    finally:
+        conn.close()
+
+    result = {}
+    for k in sorted(keys):
+        result[k] = get_config_value(k)
+    return result
