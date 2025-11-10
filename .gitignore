@@ -36,6 +36,11 @@ htmlcov/
 .tox/
 .nox/
 
+# Type checker / linters / formatters
+.mypy_cache/
+.ruff_cache/
+.python-version
+
 # IDE/editor
 .vscode/
 .idea/
