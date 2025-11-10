@@ -89,9 +89,10 @@ def atomically_get_next_job(worker_id: str):
         now_timestamp = datetime.now(timezone.utc).timestamp()
         
         # This query is complex:
-        # 1. Select any 'pending' job.
-        # 2. Select any 'failed' job WHERE:
-        #    current_time > updated_at_time + (backoff_base * (2 ** attempts))
+    # 1. Select any 'pending' job.
+    # 2. Select any 'failed' job WHERE retry is due using exponential backoff:
+    #    delay = (backoff_base ^ attempts) seconds
+    #    current_time > updated_at_time + POW(backoff_base, attempts)
         # 3. Order by creation time to process oldest jobs first.
         
         # Note: SQLite doesn't have a POWER() function by default.
@@ -105,12 +106,12 @@ def atomically_get_next_job(worker_id: str):
             WHERE state = 'pending'
             OR (
                 state = 'failed' AND
-                {now_timestamp} > (CAST(strftime('%s', updated_at) AS INTEGER) + (? * POW(2, attempts)))
+                {now_timestamp} > (CAST(strftime('%s', updated_at) AS INTEGER) + POW(?, attempts))
             )
             ORDER BY created_at ASC
             LIMIT 1
         """
-        
+
         cursor.execute(query, (backoff_base,))
         job_row = cursor.fetchone()
 
