@@ -1,10 +1,8 @@
-# QueueCTL - A CLI Job Queue System
+# QueueCTL
 
-`queuectl` is a minimal, production-grade, CLI-based background job queue system built in Python.
+`queuectl` is a CLI-based background job queue system built in Python.
 
 It manages background jobs with multiple worker processes, handles retries using exponential backoff, and maintains a Dead Letter Queue (DLQ) for permanently failed jobs.
-
-**Demo Video:** [Add link here]
 
 ---
 
@@ -12,8 +10,8 @@ It manages background jobs with multiple worker processes, handles retries using
 
 1. Clone and enter the repo
      ```bash
-     git clone https://github.com/YOUR_USERNAME/YOUR_REPO_NAME.git
-     cd YOUR_REPO_NAME
+     git clone https://github.com/VectorSigmaOmega/QueueCTL-Flam.git
+     cd QueueCTL-Flam
      ```
 2. Install dependencies
      ```bash
@@ -55,7 +53,12 @@ It manages background jobs with multiple worker processes, handles retries using
     # --- Worker Status ---
     # Found 3 active worker(s): [...]
     # --- Job Summary ---
-    #   Total: ... Pending: ... Processing: ... Completed: ... Failed: ... Dead (DLQ): ...
+    #   Total: ... 
+    #   Pending: ...
+    #   Processing: ...
+    #   Completed: ... 
+    #   Failed: ...
+    #   Dead (DLQ): ...
     ```
 
 - List jobs (all or by state)
@@ -76,7 +79,7 @@ It manages background jobs with multiple worker processes, handles retries using
     queuectl config list
     queuectl config get max_retries
     queuectl config set max_retries 4
-    queuectl config set backoff_base 2   # hyphenated forms also work
+    queuectl config set backoff_base 2 
     ```
 
 ---
@@ -87,11 +90,11 @@ It manages background jobs with multiple worker processes, handles retries using
     - `jobs(id, command, state, attempts, max_retries, created_at, updated_at)`
     - `config(key, value)`
 - Workers: Separate background processes started via a launcher. Each worker:
-    - Atomically selects the next job inside a transaction.
+    - Selects the next job inside a transaction.
     - Executes the shell `command` and uses exit code to determine success/failure.
     - On failure, increments `attempts` and marks `failed` (or `dead` if attempts reached `max_retries`).
     - Handles SIGTERM/SIGINT to finish current iteration and exit cleanly.
-- Backoff: Exponential retry delay based on the configured base: delay = base^attempts seconds.
+- Backoff: Exponential retry delay based on the formula: $\text{delay} = \text{base}^\text{attempts}$ seconds.
 - DLQ: Jobs moved to `dead` after exhausting retries are listed via `queuectl dlq list`; they can be retried with `queuectl dlq retry <id>` (resets attempts to 0 and state to pending).
 
 ---
@@ -105,20 +108,10 @@ It manages background jobs with multiple worker processes, handles retries using
      - exit code != 0: `failed` (will be retried after backoff)
 4. When `attempts >= max_retries`: move to `dead` (DLQ)
 
----
-
-## 5) Assumptions & Trade-offs
-
-- Exponential backoff formula required by the assignment is: delay = base^attempts seconds.
-    - Default `backoff_base = 2` yields delays: 1st retry after 2s, then 4s, 8s, ...
-    - You can change the base with `queuectl config set backoff_base <n>`.
-- Jobs stuck in `processing` due to abrupt worker termination are not automatically re-queued in this version.
-    - For the assignment scope, this is acceptable; a future enhancement could implement a processing lease/timeout.
-- Commands are executed with `shell=True`; ensure inputs are trusted in your environment.
 
 ---
 
-## 6) Manual Testing Instructions
+## 5) Manual Testing Instructions
 
 Until automated tests are reintroduced, you can validate core flows manually:
 
@@ -150,8 +143,3 @@ queuectl worker stop
 ```
 
 ---
-
-## 7) What’s Next
-
-- Reintroduce minimal automated tests later.
-- Optional improvements: processing lease, structured logging, additional admin commands (purge, show).
